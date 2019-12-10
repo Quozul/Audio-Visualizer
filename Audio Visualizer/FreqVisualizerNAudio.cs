@@ -7,12 +7,9 @@ namespace AudioVisualizer
     /*
      * Visualizer using frequencies
      */
-    class FreqVisualizer : VisualizerWindow
+    class FreqVisualizerNAudio : VisualizerWindow
     {
         private WaveBuffer buffer;
-
-        private int Intensity = 2;
-        private int Zoom = 8;
 
         private int M = 6;
 
@@ -39,30 +36,6 @@ namespace AudioVisualizer
             buffer = new WaveBuffer(e.Buffer); // save the buffer in the class variable
         }
 
-        public override void KeyPressed(KeyConstant key, Scancode scancode, bool isRepeat)
-        {
-            base.KeyPressed(key, scancode, isRepeat);
-
-            switch (key)
-            {
-                case KeyConstant.Right:
-                    Zoom += 1;
-                    break;
-                case KeyConstant.Left:
-                    Zoom = Math.Max(Zoom - 1, 1);
-                    break;
-                case KeyConstant.R:
-                    Zoom = 8;
-                    Intensity = 2;
-                    break;
-            }
-        }
-
-        public override void WheelMoved(int x, int y)
-        {
-            Intensity = Math.Max(Intensity - y, 1);
-        }
-
         public override void Draw()
         {
             Graphics.SetColor(1, 1, 1);
@@ -72,12 +45,7 @@ namespace AudioVisualizer
                 return;
             }
 
-            int len = buffer.FloatBuffer.Length / Zoom;
-
-            if (Zoom <= 0)
-                Graphics.Print("Zoom is invalid");
-
-            float pad = (float)len / WindowWidth; // samples per pixels
+            int len = buffer.FloatBuffer.Length / 8;
 
             // fft
             NAudio.Dsp.Complex[] values = new NAudio.Dsp.Complex[len];
