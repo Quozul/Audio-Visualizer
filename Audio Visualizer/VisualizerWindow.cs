@@ -12,11 +12,15 @@ namespace AudioVisualizer
         public int WindowWidth;
         public int WindowHeight;
 
+        public string WindowTitle;
+
         public override void Load()
         {
             WindowSettings mode = Window.GetMode();
             mode.resizable = true;
             Window.SetMode(mode);
+
+            Window.SetTitle(WindowTitle);
 
             WindowWidth = Graphics.GetWidth();
             WindowHeight = Graphics.GetHeight();

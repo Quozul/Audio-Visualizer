@@ -4,22 +4,29 @@ using NAudio.Wave;
 
 namespace AudioVisualizer
 {
-    /*
-     * Osciloscope made by saving the WaveBuffer
-     * as a class variable
+    /* 
+     * Oscilloscope using a BufferedWaveProvider
      */
-    class Osciloscope : VisualizerWindow
+    class OscilloscopeBWP : Scene
     {
-        public WaveBuffer buffer;
+        public BufferedWaveProvider bwp;
+        private int BUFFERSIZE = 4800;
 
         public int SIZE = 16;
 
         public override void Load()
         {
-            base.Load();
+            WindowSettings mode = Window.GetMode();
+            mode.resizable = true;
+            Window.SetMode(mode);
 
-            // start audio capture
+            // audio stuff
             var capture = new WasapiLoopbackCapture();
+
+            bwp = new BufferedWaveProvider(capture.WaveFormat);
+            bwp.BufferLength = BUFFERSIZE * 2;
+
+            bwp.DiscardOnBufferOverflow = true;
 
             capture.DataAvailable += DataAvailable;
 
@@ -33,29 +40,31 @@ namespace AudioVisualizer
 
         void DataAvailable(object sender, WaveInEventArgs e)
         {
-            buffer = new WaveBuffer(e.Buffer); // save the buffer in the class variable
+            bwp.AddSamples(e.Buffer, 0, e.BytesRecorded);
         }
 
         public override void Draw()
         {
-            if (buffer == null) return;
+            byte[] b = new byte[BUFFERSIZE];
+            bwp.Read(b, 0, BUFFERSIZE);
 
-            int len = buffer.FloatBuffer.Length / 8;
-            int pad = len / WindowWidth; // samples per pixels
+            WaveBuffer buffer = new WaveBuffer(b);
+
+            int width = Graphics.GetWidth() * 2;
+            int height = Graphics.GetHeight();
+            int len = BUFFERSIZE;
+            int pad = len / width;
 
             for (int index = 0; index < len; index += pad)
             {
-                // current sample
                 int x = index / pad;
                 float y = buffer.FloatBuffer[index];
 
-                // previous sample
                 int x1 = Math.Max(index - 1, 0) / pad;
                 float y1 = buffer.FloatBuffer[Math.Max(index - 1, 0)];
 
-                // render
                 Graphics.SetColor(Math.Abs(y), 1f - Math.Abs(y), Math.Abs(y), 1f);
-                Graphics.Line(x1, WindowHeight / 2 + y1 * (WindowHeight / 2), x, WindowHeight / 2 + y * (WindowHeight / 2));
+                Graphics.Line(x1, height / 2 + y1 * (height / 2), x, height / 2 + y * (height / 2));
             }
         }
     }
