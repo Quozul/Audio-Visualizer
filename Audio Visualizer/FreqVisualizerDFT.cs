@@ -1,24 +1,25 @@
-﻿using System;
-using Love;
+﻿using Love;
 using NAudio.Wave;
+using System;
+using System.Numerics;
 
 namespace AudioVisualizer
 {
     /*
-     * Oscilloscope made by saving the WaveBuffer
-     * as a class variable
-     * Same as oscilloscope but with better precision
+     * Visualizer using frequencies
      */
-    class OscilloscopeImproved : VisualizerWindow
+    class FreqVisualizerDFT : VisualizerWindow
     {
         private WaveBuffer buffer;
 
         private int Intensity = 2;
         private int Zoom = 8;
 
+        private int M = 6;
+
         public override void Load()
         {
-            WindowTitle = "Audio Oscilloscope";
+            WindowTitle = "Frequency Visualizer";
             base.Load();
 
             // start audio capture
@@ -72,8 +73,6 @@ namespace AudioVisualizer
                 return;
             }
 
-            Graphics.Print("Controls:\nMouse wheel: Intensity\nLeft/Right arrows: Zoom\nf: Toggle fullscreen\nr: Reset zoom & intensity\nescape: Quit", 0, WindowHeight - 14 * 6);
-
             int len = buffer.FloatBuffer.Length / Zoom;
 
             if (Zoom <= 0)
@@ -81,29 +80,20 @@ namespace AudioVisualizer
 
             float pad = (float)len / WindowWidth; // samples per pixels
 
-            Graphics.Print(
-                "Length of buffer: " + buffer.FloatBuffer.Length.ToString() + "\n" +
-                "Length: " + len + "\n" +
-                "Window width: " + WindowWidth + "\n" +
-                "Samples per pixels: " + pad.ToString("N2") + "\n" +
-                "Intensity: " + Intensity.ToString() + "\n" +
-                "Zoom: " + Zoom.ToString()
-            );
-
-            for (int x = 0; x < WindowWidth; x++)
+            // fft
+            Complex[] values = new Complex[len];
+            for (int i = 0; i < 2049; i++)
             {
-                // current sample
-                int i = (int)Math.Round(x * pad);
-                float y = buffer.FloatBuffer[i];
+                values[i] = new Complex(buffer.FloatBuffer[i], 0.0);
+            }
+            Accord.Math.FourierTransform.FFT(values, Accord.Math.FourierTransform.Direction.Forward);
 
-                // previous sample
-                int x1 = x - 1;
-                int i1 = (int)Math.Round((x - 1) * pad);
-                float y1 = buffer.FloatBuffer[Math.Max(i1, 0)];
+            float size = (float)WindowWidth / ((float)Math.Pow(2, M) / 2);
 
-                // render
-                Graphics.SetColor(Math.Abs(y), 1f - Math.Abs(y), Math.Abs(y), 1f);
-                Graphics.Line(x1, WindowHeight / 2 + y1 * (WindowHeight / (Intensity * 2)), x, WindowHeight / 2 + y * (WindowHeight / (Intensity * 2)));
+            for (int i = 1; i < Math.Pow(2, M) / 2; i++)
+            {
+                //Graphics.Print(i.ToString() + ": " + values[i].X.ToString("N2") + " i " + (values[i].Y + 0.50f).ToString("N2"), 0, (i + 1) * 16);
+                Graphics.Rectangle(DrawMode.Fill, (i - 1) * size, WindowHeight, size, (float)values[i].Magnitude);
             }
         }
     }

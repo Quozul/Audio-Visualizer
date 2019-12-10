@@ -6,4 +6,5 @@ The aim of this project is to reproduce an audio visualizer similar to the Monst
 ## How to run?
 - Clone this repository
 - Install [Visual Studio](https://visualstudio.microsoft.com/) on your machine
+- Install [.NET Core 3.1 sdk](https://dotnet.microsoft.com/download/visual-studio-sdks)
 - Open the project file
