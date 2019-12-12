@@ -79,7 +79,7 @@ namespace AudioVisualizer
             if (Zoom <= 0)
                 Graphics.Print("Zoom is invalid");
 
-            float pad = (float)len / WindowWidth; // samples per pixels
+            float pad = (float)len / 2 / WindowWidth; // samples per pixels
 
             Graphics.Print(
                 "Length of buffer: " + buffer.FloatBuffer.Length.ToString() + "\n" +
