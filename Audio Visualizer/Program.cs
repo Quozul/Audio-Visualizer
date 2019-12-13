@@ -6,7 +6,7 @@ namespace AudioVisualizer
     {
         static void Main(string[] args)
         {
-            Boot.Run(new OscilloscopeImproved());
+            Boot.Run(new FreqVisualizerAccord());
         }
     }
 }
