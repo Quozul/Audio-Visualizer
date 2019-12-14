@@ -13,10 +13,10 @@ namespace AudioVisualizer
         private int Resolution = 2048;
 
         private int BufferLife = 1;
-        private List<float> BufferTimes = new List<float>();
 
         private BufferedWaveProvider[] stereo = new BufferedWaveProvider[2];
-        private List<List<float[]>> audio = new List<List<float[]>>();
+        private List<WaveBuffer[]> audio = new List<WaveBuffer[]>();
+        private List<float> BufferTimes = new List<float>();
 
         public override void Load()
         {
@@ -56,7 +56,7 @@ namespace AudioVisualizer
                     }
                 }
 
-                List<float[]> a = new List<float[]>();
+                WaveBuffer[] a = new WaveBuffer[2];
 
                 byte[] buffer1 = new byte[Resolution];
                 byte[] buffer2 = new byte[Resolution];
@@ -64,8 +64,8 @@ namespace AudioVisualizer
                 stereo[0].Read(buffer1, 0, buffer1.Length);
                 stereo[1].Read(buffer2, 0, buffer2.Length);
 
-                a.Insert(0, new WaveBuffer(buffer1).FloatBuffer);
-                a.Insert(1, new WaveBuffer(buffer2).FloatBuffer);
+                a[0] = new WaveBuffer(buffer1);
+                a[1] = new WaveBuffer(buffer2);
 
                 audio.Add(a);
             }
@@ -76,6 +76,9 @@ namespace AudioVisualizer
             audio.ForEach((a) =>
             {
                 int index = audio.IndexOf(a);
+
+                Console.WriteLine(BufferTimes[index]);
+
                 BufferTimes[index] += dt;
 
                 if (BufferTimes[index] >= BufferLife)
@@ -100,12 +103,12 @@ namespace AudioVisualizer
                 int index = audio.IndexOf(a);
                 float color = (index - audio.Count) / audio.Count;
 
-                Graphics.Print("Index: " + index.ToString() + "\nLife: " + BufferTimes[index].ToString("N2"), 0, (index + 1) * 14);
+                //Graphics.Print("Index: " + index.ToString() + "\nLife: " + BufferTimes[index].ToString("N2"), 0, (index + 1) * 14);
 
-                for (int i = 0; i < a.Count / 4; i++)
+                for (int i = 0; i < a[0].FloatBuffer.Length / 4; i++)
                 {
                     int j = Math.Max(i - 1, 0);
-                    Graphics.Line(WindowWidth / 2 + a[0][j] * Zoom, WindowHeight / 2 + a[1][j] * Zoom, WindowWidth / 2 + a[0][i] * Zoom, WindowHeight / 2 + a[1][i] * Zoom);
+                    Graphics.Line(WindowWidth / 2 + a[0].FloatBuffer[j] * Zoom, WindowHeight / 2 + a[1].FloatBuffer[j] * Zoom, WindowWidth / 2 + a[0].FloatBuffer[i] * Zoom, WindowHeight / 2 + a[1].FloatBuffer[i] * Zoom);
                 }
             });
         }
