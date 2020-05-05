@@ -3,6 +3,7 @@ using NAudio.Wave;
 using System;
 using System.Numerics;
 using MathNet.Numerics.IntegralTransforms;
+using System.Collections.Generic;
 
 namespace AudioVisualizer
 {
@@ -20,13 +21,13 @@ namespace AudioVisualizer
     {
         private WaveBuffer buffer;
 
-        private static int vertical_smoothness = 50;
-        private static int horizontal_smoothness = 5;
+        private static int vertical_smoothness = 4;
+        private static int horizontal_smoothness = 3;
         private float size = 10;
 
-        private static SmoothType smoothType = SmoothType.vertical;
+        private static SmoothType smoothType = SmoothType.both;
 
-        private Complex[][] smooth = new Complex[vertical_smoothness][];
+        private List<Complex[]> smooth = new List<Complex[]>();
 
         private Complex[] values;
 
@@ -63,13 +64,9 @@ namespace AudioVisualizer
             // shift array
             if (smoothType == SmoothType.vertical || smoothType == SmoothType.both)
             {
-                for (int i = 1; i < vertical_smoothness; i++)
-                    if (smooth[i-1] != null)
-                    {
-                        Console.WriteLine(i);
-                        smooth[i] = smooth[i - 1];
-                    }
-                smooth[0] = values;
+                smooth.Add(values);
+                if (smooth.Count > vertical_smoothness)
+                    smooth.RemoveAt(0);
             }
         }
 
@@ -82,34 +79,49 @@ namespace AudioVisualizer
                 return;
             }
 
-            for (int i = 0; i < values.Length; i++)
+            double value = 0;
+
+            if (smoothType == SmoothType.vertical)
             {
-                //Graphics.Print(i.ToString() + ": " + values[i].X.ToString("N2") + " i " + (values[i].Y + 0.50f).ToString("N2"), 0, (i + 1) * 16);
-                double value = 0;
-
-                if (smoothType == SmoothType.vertical)
+                var s = smooth.ToArray();
+                // vertical smoothness
+                for (int i = 0; i < values.Length; i++)
                 {
-                    // vertical smoothness
-                    for (int v = 0; v < vertical_smoothness; v++)
+                    for (int v = 0; v < s.Length; v++)
                         value += Math.Abs(smooth[v] != null ? smooth[v][i].Imaginary : 0.0);
-                    value /= vertical_smoothness;
-                }
-                else if (smoothType == SmoothType.horizontal)
-                {
-                    // horizontal smoothness
-                    for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, values.Length); h++)
-                        value += Math.Abs(values[h].Imaginary);
-                    value /= horizontal_smoothness;
-                }
-                else
-                {
-                    for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, values.Length); h++)
-                        for (int v = 0; v < vertical_smoothness; v++)
-                            value += Math.Abs(smooth[v] != null ? smooth[v][h].Imaginary : 0.0);
-                    value /= (horizontal_smoothness * vertical_smoothness);
-                }
+                    value /= s.Length;
 
-                Graphics.Rectangle(DrawMode.Fill, (i - 1) * size, WindowHeight, size, (float)-value);
+                    Graphics.Rectangle(DrawMode.Fill, (i - 1) * size, WindowHeight, size, (float)-value);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < values.Length; i++)
+                {
+                    //Graphics.Print(i.ToString() + ": " + values[i].X.ToString("N2") + " i " + (values[i].Y + 0.50f).ToString("N2"), 0, (i + 1) * 16);
+
+                    value = 0;
+
+                    if (smoothType == SmoothType.horizontal)
+                    {
+                        // horizontal smoothness
+                        for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, values.Length); h++)
+                            value += Math.Abs(values[h].Imaginary * ((i - h) / horizontal_smoothness));
+                        value /= horizontal_smoothness;
+                    }
+                    else
+                    {
+                        var s = smooth.ToArray();
+
+                        for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, values.Length); h++)
+                            for (int v = 0; v < s.Length; v++)
+                                value += Math.Abs(s[v] != null ? s[v][h].Imaginary : 0.0);
+                        value /= (horizontal_smoothness * s.Length);
+                    }
+
+                    Graphics.SetColor(1, 1, 1);
+                    Graphics.Rectangle(DrawMode.Fill, (i - 1) * size, WindowHeight, size, (float)-value);
+                }
             }
         }
     }
