@@ -6,7 +6,7 @@ namespace AudioVisualizer
     {
         static void Main(string[] args)
         {
-            Boot.Run(new FreqVisualizerAccord());
+            Boot.Run(new FreqVisualizerMathNet());
         }
     }
 }

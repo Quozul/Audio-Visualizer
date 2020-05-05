@@ -74,7 +74,7 @@ namespace AudioVisualizer
             for (int i = 0; i < Resolution / 4; i++)
             {
                 int j = Math.Max(i - 1, 0);
-                Graphics.Line(WindowWidth / 2 + left[j] * Zoom, WindowHeight / 2 + right[j] * Zoom, WindowWidth / 2 + left[i] * Zoom, WindowHeight / 2 + right[i] * Zoom);
+                Graphics.Line(WindowWidth / 2 + left[j] * Zoom, WindowHeight / 2 + right[j] * -Zoom, WindowWidth / 2 + left[i] * Zoom, WindowHeight / 2 + right[i] * -Zoom);
             }
         }
     }
