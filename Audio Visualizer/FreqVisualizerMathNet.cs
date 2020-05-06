@@ -35,6 +35,8 @@ namespace AudioVisualizer
 
         private double pre_value = 0;
 
+        private double count = 64;
+
         public override void Load()
         {
             WindowTitle = "Frequency Visualizer";
@@ -63,7 +65,7 @@ namespace AudioVisualizer
             values = new Complex[len];
             for (int i = 0; i < len; i++)
                 values[i] = new Complex(buffer.FloatBuffer[i], 0.0);
-            Fourier.Forward(values, FourierOptions.Matlab);
+            Fourier.Forward(values, FourierOptions.Default);
 
             // shift array
             if (smoothType == SmoothType.vertical || smoothType == SmoothType.both)
@@ -123,18 +125,108 @@ namespace AudioVisualizer
                 case KeyConstant.Number5:
                     vis_mode = 4;
                     break;
+                case KeyConstant.Number6:
+                    vis_mode = 5;
+                    break;
+                case KeyConstant.Number7:
+                    vis_mode = 6;
+                    break;
+                case KeyConstant.Number8:
+                    vis_mode = 7;
+                    break;
+                case KeyConstant.Number9:
+                    vis_mode = 8;
+                    break;
+                case KeyConstant.Number0:
+                    vis_mode = 9;
+                    break;
             }
         }
 
-        private void DrawVis(int i, double n, float size, double value)
+        public double vSmooth(int i, Complex[][] s)
         {
-            double j = ((i - 1) / n);
-            float pre_x = (float)(Math.Cos(j) * pre_value) * 10 + WindowWidth / 2;
-            float pre_y = (float)(Math.Sin(j) * pre_value) * 10 + WindowHeight / 2;
+            double value = 0;
 
-            j = (i / n);
-            float x = (float)(Math.Cos(j) * value) * 10 + WindowWidth / 2;
-            float y = (float)(Math.Sin(j) * value) * 10 + WindowHeight / 2;
+            for (int v = 0; v < s.Length; v++)
+                value += Math.Abs(s[v] != null ? s[v][i].Magnitude : 0.0);
+
+            return value / s.Length;
+        }
+
+        public double MovingAverage(Complex[] v, int i)
+        {
+            double value = 0;
+
+            for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, 64); h++)
+                value += v[h].Magnitude;
+
+            return value / ((horizontal_smoothness + 1) * 2);
+        }
+
+        public double BothSmooth(int i)
+        {
+            var s = smooth.ToArray();
+
+            double value = 0;
+
+            for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, 64); h++)
+                value += vSmooth(h, s);
+
+            return value / ((horizontal_smoothness + 1) * 2);
+        }
+
+        public double hSmooth(int i)
+        {
+            if (i > 1) {
+                double value = values[i].Magnitude;
+
+                for (int h = i - horizontal_smoothness; h <= i + horizontal_smoothness; h++)
+                    value += values[h].Magnitude;
+
+                return value / ((horizontal_smoothness + 1) * 2);
+            }
+
+            return 0;
+        }
+
+        private void DrawVis(int i, double c, float size, double value)
+        {
+            float pre_x = 0, pre_y = 0, x = 0, y = 0;
+
+            if (vis_mode == 2 || vis_mode == 3 || vis_mode == 4)
+            {
+                value *= 100;
+
+                double n = c / (Math.PI * 2);
+                double j = (i - 1) / n;
+                pre_x = (float)(Math.Cos(j) * pre_value) + WindowWidth / 2;
+                pre_y = (float)(Math.Sin(j) * pre_value) + WindowHeight / 2;
+
+                j = i / n;
+                x = (float)(Math.Cos(j) * value) + WindowWidth / 2;
+                y = (float)(Math.Sin(j) * value) + WindowHeight / 2;
+            }
+            else if (vis_mode == 6)
+            {
+                value *= 10;
+
+                double n = c / Math.PI;
+                double j = i / n + Math.PI / 2;
+
+                pre_x = (float)(Math.Cos(j) * pre_value) * 10;
+                pre_y = (float)(Math.Sin(j) * pre_value) * -10 + WindowHeight / 2;
+
+                j = (i + 1) / n + Math.PI / 2;
+                x = (float)(Math.Cos(j) * value) * 10;
+                y = (float)(Math.Sin(j) * value) * -10 + WindowHeight / 2;
+            }
+            else
+            {
+                value *= WindowHeight / 2;
+            }
+
+            value += BothSmooth(i - 1) + BothSmooth(i + 1);
+            value /= 3;
 
             switch (vis_mode)
             {
@@ -150,6 +242,26 @@ namespace AudioVisualizer
                 case 4:
                     Graphics.SetColor((float)value / 255, (float)value / 255, (float)value / 255);
                     Graphics.Polygon(DrawMode.Fill, pre_x, pre_y, x, y, WindowWidth / 2, WindowHeight / 2);
+                    break;
+                case 5:
+                    Graphics.SetColor(1f - i / 64f, i / 64f, 0, 1);
+                    Graphics.Arc(DrawMode.Fill, WindowWidth / 2, WindowHeight / 2, 256, 0, (float)value / 255);
+                    break;
+                case 6:
+                    Graphics.Line(pre_x + WindowWidth / 2, pre_y, x + WindowWidth / 2, y);
+                    Graphics.Line(-pre_x + WindowWidth / 2, pre_y, -x + WindowWidth / 2, y);
+                    break;
+                case 7:
+                    for (float l = 0; l < value + size * 0.75f; l += size * 0.75f)
+                        Graphics.Rectangle(DrawMode.Fill, i * size, WindowHeight - l, size * 0.95f, size / 2);
+                    break;
+                case 8:
+                    for (float l = 0; l < value; l++)
+                    {
+                        float u = l / WindowHeight;
+                        Graphics.SetColor(u, 1-u, 0);
+                        Graphics.Line(i * size, WindowHeight - l, (i + 1) * size, WindowHeight - l);
+                    }
                     break;
                 default:
                     Graphics.Rectangle(DrawMode.Fill, i * size, WindowHeight, size, (float)-value);
@@ -167,51 +279,42 @@ namespace AudioVisualizer
                 return;
             }
 
-            Graphics.Print("1-5: visualizer mode\nLeft/right arrows: horizontal smoothness strength\n Current: " + horizontal_smoothness + "\nUp/down arrows: vertical smoothness strength\n Current: " + vertical_smoothness, 0, 0);
+            Graphics.Print("FPS:" + Timer.GetFPS() + "\n1-8: visualizer mode\nLeft/right arrows: horizontal smoothness strength\n Current: " + horizontal_smoothness + "\nUp/down arrows: vertical smoothness strength\n Current: " + vertical_smoothness, 0, 0);
 
             size = WindowWidth / 64;
-
-            double n = 64 / (Math.PI * 2);
 
             if (smoothType == SmoothType.vertical)
             {
                 var s = smooth.ToArray();
                 // vertical smoothness
-                for (int i = 0; i < 64; i++)
+                for (int i = 0; i < count; i++)
                 {
                     double value = 0;
                     for (int v = 0; v < s.Length; v++)
                         value += Math.Abs(s[v] != null ? s[v][i].Magnitude : 0.0);
                     value /= s.Length;
 
-                    DrawVis(i, n, size, value);
+                    DrawVis(i, count, size, value);
                 }
             }
             else if (smoothType == SmoothType.horizontal)
             {
-                for (int i = 0; i < 64; i++)
+                for (int i = 0; i < count; i++)
                 {
                     double value = 0;
                     for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, 64); h++)
                         value += values[h].Magnitude;
                     value /= ((horizontal_smoothness + 1) * 2);
 
-                    DrawVis(i, n, size, value);
+                    DrawVis(i, count, size, value);
                 }
             }
             else if (smoothType == SmoothType.both)
             {
-                var s = smooth.ToArray();
-
-                for (int i = 0; i < 64; i++)
+                for (int i = 0; i < count; i++)
                 {
-                    double value = 0;
-                    for (int h = Math.Max(i - horizontal_smoothness, 0); h < Math.Min(i + horizontal_smoothness, 64); h++)
-                        for (int v = 0; v < s.Length; v++)
-                            value += Math.Abs(s[v] != null ? s[v][h].Magnitude : 0.0);
-                    value /= (((horizontal_smoothness + 1) * 2) * vertical_smoothness);
-
-                    DrawVis(i, n, size, value);
+                    double value = BothSmooth(i);
+                    DrawVis(i, count, size, value);
                 }
             }
         }
